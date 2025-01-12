@@ -102,7 +102,7 @@ export async function trainModel(config: TrainingConfig): Promise<MetricsResult>
         await tfvis.show.history(
           { name: 'Training History' },
           trainLogs,
-          { width: 400, height: 300 }
+          ['loss', 'accuracy', 'val_loss', 'val_accuracy']
         );
       },
     }),
