@@ -83,15 +83,18 @@ export async function trainModel(config: TrainingConfig): Promise<MetricsResult>
     metrics: ['accuracy'],
   });
 
-  const trainLogs: TrainingLogs[] = [];
+  const trainLogs: Record<string, number>[] = [];
 
   // Training callbacks
   const callbacks = [
     new tf.CustomCallback({
       onEpochEnd: async (epoch, logs) => {
-        const currentLogs: TrainingLogs = {
+        const currentLogs = {
           epoch,
-          ...logs as { loss: number; accuracy: number; val_loss?: number; val_accuracy?: number }
+          loss: logs?.loss || 0,
+          accuracy: logs?.accuracy || 0,
+          val_loss: logs?.val_loss || 0,
+          val_accuracy: logs?.val_accuracy || 0
         };
         trainLogs.push(currentLogs);
 
