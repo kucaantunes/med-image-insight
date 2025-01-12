@@ -2,9 +2,15 @@ import OpenAI from "openai";
 import { HfInference } from "@huggingface/inference";
 
 const hf = new HfInference(import.meta.env.VITE_HUGGINGFACE_API_KEY);
-const openai = new OpenAI({
-  apiKey: import.meta.env.VITE_OPENAI_API_KEY
-});
+
+// Initialize OpenAI with a function to get the API key
+const getOpenAIClient = () => {
+  const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error("OpenAI API key is not set. Please provide your API key in the project settings.");
+  }
+  return new OpenAI({ apiKey });
+};
 
 interface Reference {
   id: number;
@@ -27,7 +33,6 @@ export async function processResearchQuestion(
 ): Promise<LLMResponse[]> {
   // Truncate text if needed (most models have 4096 token limit)
   const truncatedText = pdfText.slice(0, 12000); // Approximate limit
-
   const responses: LLMResponse[] = [];
 
   // Process with BART
@@ -72,6 +77,7 @@ export async function processResearchQuestion(
 
   // Process with GPT-4
   try {
+    const openai = getOpenAIClient();
     const gptResponse = await openai.chat.completions.create({
       model: "gpt-4",
       messages: [
