@@ -45,7 +45,7 @@ async function loadData(datasetPath: string): Promise<TrainingData> {
 
 export async function trainModel(config: TrainingConfig): Promise<MetricsResult> {
   // Load data
-  const { trainData, trainLabels, testData, testLabels } = await loadData(config.datasetPath);
+  const data = await loadData(config.datasetPath);
 
   // Model architecture
   const model = tf.sequential({
@@ -83,13 +83,13 @@ export async function trainModel(config: TrainingConfig): Promise<MetricsResult>
         await tfvis.show.history({ name: 'Training History' }, {
           values: [{ epoch, ...logs }],
           metrics: ['loss', 'accuracy'],
-        });
+        }, { width: 400, height: 300 });
       },
     }),
   ];
 
   // Start training
-  const history = await model.fit(trainData, trainLabels, {
+  const history = await model.fit(data.trainData, data.trainLabels, {
     epochs: config.epochs,
     batchSize: config.batchSize,
     validationSplit: 0.2,
@@ -97,9 +97,9 @@ export async function trainModel(config: TrainingConfig): Promise<MetricsResult>
   });
 
   // Make predictions on test data
-  const predictions = model.predict(testData) as tf.Tensor2D;
+  const predictions = model.predict(data.testData) as tf.Tensor2D;
   const predArray = await predictions.array();
-  const labelsArray = await testLabels.array();
+  const labelsArray = await data.testLabels.array();
 
   // Calculate metrics
   const metrics: MetricsResult = {
@@ -113,10 +113,10 @@ export async function trainModel(config: TrainingConfig): Promise<MetricsResult>
 
   // Cleanup tensors
   predictions.dispose();
-  trainData.dispose();
-  trainLabels.dispose();
-  testData.dispose();
-  testLabels.dispose();
+  data.trainData.dispose();
+  data.trainLabels.dispose();
+  data.testData.dispose();
+  data.testLabels.dispose();
 
   return metrics;
 }

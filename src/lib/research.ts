@@ -1,10 +1,10 @@
-import { Configuration, OpenAIApi } from "openai";
+import OpenAI from "openai";
 import { HfInference } from "@huggingface/inference";
 
 const hf = new HfInference(process.env.HUGGINGFACE_API_KEY);
-const openai = new OpenAIApi(new Configuration({
+const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
-}));
+});
 
 interface Reference {
   id: number;
@@ -70,10 +70,10 @@ export async function processResearchQuestion(
     console.error("GPT-Neo Error:", error);
   }
 
-  // Process with GPT-3.5
+  // Process with GPT-4
   try {
-    const gptResponse = await openai.createChatCompletion({
-      model: "gpt-3.5-turbo",
+    const gptResponse = await openai.chat.completions.create({
+      model: "gpt-4",
       messages: [
         {
           role: "system",
@@ -89,12 +89,12 @@ export async function processResearchQuestion(
     });
     
     responses.push({
-      model: "GPT-3.5",
-      answer: gptResponse.data.choices[0].message?.content || "",
+      model: "GPT-4",
+      answer: gptResponse.choices[0].message?.content || "",
       references: extractReferences(pdfText)
     });
   } catch (error) {
-    console.error("GPT-3.5 Error:", error);
+    console.error("GPT-4 Error:", error);
   }
 
   return responses;
