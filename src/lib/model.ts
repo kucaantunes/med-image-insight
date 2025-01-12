@@ -28,6 +28,14 @@ interface MetricsResult {
   };
 }
 
+interface TrainingLogs {
+  epoch: number;
+  loss?: number;
+  accuracy?: number;
+  val_loss?: number;
+  val_accuracy?: number;
+}
+
 async function loadData(datasetPath: string): Promise<TrainingData> {
   // This is a placeholder - implement actual data loading logic
   const trainData = tf.randomNormal([100, 224, 224, 3]) as tf.Tensor4D;
@@ -75,15 +83,24 @@ export async function trainModel(config: TrainingConfig): Promise<MetricsResult>
     metrics: ['accuracy'],
   });
 
+  const trainLogs: TrainingLogs[] = [];
+
   // Training callbacks
   const callbacks = [
     new tf.CustomCallback({
       onEpochEnd: async (epoch, logs) => {
+        const currentLogs: TrainingLogs = {
+          epoch,
+          ...logs as { loss: number; accuracy: number; val_loss?: number; val_accuracy?: number }
+        };
+        trainLogs.push(currentLogs);
+
         // Update progress visualization
-        await tfvis.show.history({ name: 'Training History' }, {
-          values: [{ epoch, ...logs }],
-          metrics: ['loss', 'accuracy'],
-        }, { width: 400, height: 300 });
+        await tfvis.show.history(
+          { name: 'Training History' },
+          trainLogs,
+          { width: 400, height: 300 }
+        );
       },
     }),
   ];
@@ -102,8 +119,11 @@ export async function trainModel(config: TrainingConfig): Promise<MetricsResult>
   const labelsArray = await data.testLabels.array();
 
   // Calculate metrics
+  const accuracy = history.history.accuracy[history.history.accuracy.length - 1] as number;
+  
+  // Calculate metrics
   const metrics: MetricsResult = {
-    accuracy: history.history.accuracy[history.history.accuracy.length - 1],
+    accuracy,
     precision: calculatePrecision(predArray, labelsArray),
     recall: calculateRecall(predArray, labelsArray),
     f1Score: calculateF1Score(predArray, labelsArray),
