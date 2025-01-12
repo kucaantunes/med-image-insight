@@ -1,81 +1,116 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import TrainingProgress from "@/components/TrainingProgress";
-import ModelEvaluation from "@/components/ModelEvaluation";
-import XAIVisualizations from "@/components/XAIVisualizations";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { trainModel } from "@/lib/model";
+import { processResearchQuestion } from "@/lib/research";
 
 const Index = () => {
-  const [isTraining, setIsTraining] = useState(false);
-  const [trainingComplete, setTrainingComplete] = useState(false);
-  const [modelMetrics, setModelMetrics] = useState(null);
+  const [question, setQuestion] = useState("");
+  const [pdfText, setPdfText] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
 
-  const startTraining = async () => {
-    setIsTraining(true);
-    toast({
-      title: "Training Started",
-      description: "Model training has begun. This may take several minutes.",
-    });
-
-    try {
-      // Training configuration
-      const config = {
-        datasetPath: "data", // Path to dataset
-        epochs: 50,
-        batchSize: 32,
-        learningRate: 0.001,
-        optimizer: "adam",
-      };
-
-      // Start training process
-      const metrics = await trainModel(config);
-      setModelMetrics(metrics);
-      setTrainingComplete(true);
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.type !== "application/pdf") {
+        toast({
+          title: "Invalid file type",
+          description: "Please upload a PDF file",
+          variant: "destructive",
+        });
+        return;
+      }
       
+      // Read file as text
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const text = e.target?.result as string;
+        setPdfText(text);
+      };
+      reader.readAsText(file);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!question.trim() || !pdfText.trim()) {
       toast({
-        title: "Training Complete",
-        description: `Model achieved ${metrics.accuracy}% accuracy`,
+        title: "Missing information",
+        description: "Please provide both a research question and PDF content",
+        variant: "destructive",
       });
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const results = await processResearchQuestion(question, pdfText);
+      // Navigate to results page with the data
+      window.location.href = `/results?data=${encodeURIComponent(JSON.stringify(results))}`;
     } catch (error) {
       toast({
-        title: "Training Error",
-        description: "An error occurred during training.",
+        title: "Error processing request",
+        description: error instanceof Error ? error.message : "An error occurred",
         variant: "destructive",
       });
     } finally {
-      setIsTraining(false);
+      setIsProcessing(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-[#121212] text-white p-8">
-      <div className="max-w-7xl mx-auto space-y-8">
+      <div className="max-w-4xl mx-auto space-y-8">
         <Card className="bg-[#1a1f3c] p-6 border-[#2a2d3e]">
-          <h1 className="text-3xl font-bold mb-4">Medical Image Classification Training</h1>
-          <p className="text-gray-300 mb-6">
-            Train a deep learning model on chest X-ray images to classify COVID-19, Normal, and Pneumonia cases.
-          </p>
+          <h1 className="text-3xl font-bold mb-6">Research Question Analysis</h1>
           
-          {!isTraining && !trainingComplete && (
-            <Button 
-              onClick={startTraining}
-              className="bg-[#4a9eff] hover:bg-[#3a7fd9]"
-            >
-              Start Training
-            </Button>
-          )}
-
-          {isTraining && <TrainingProgress />}
-
-          {trainingComplete && modelMetrics && (
-            <div className="space-y-8">
-              <ModelEvaluation metrics={modelMetrics} />
-              <XAIVisualizations />
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Research Question
+              </label>
+              <Input
+                value={question}
+                onChange={(e) => setQuestion(e.target.value)}
+                placeholder="Enter your research question"
+                className="bg-[#2a2d3e] border-[#3a3f50]"
+              />
             </div>
-          )}
+
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                PDF Content
+              </label>
+              <div className="space-y-4">
+                <Textarea
+                  value={pdfText}
+                  onChange={(e) => setPdfText(e.target.value)}
+                  placeholder="Paste PDF content here"
+                  className="h-48 bg-[#2a2d3e] border-[#3a3f50]"
+                />
+                <div className="- or -">
+                  <Input
+                    type="file"
+                    accept=".pdf"
+                    onChange={handleFileUpload}
+                    className="bg-[#2a2d3e] border-[#3a3f50]"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <Button
+              type="submit"
+              disabled={isProcessing}
+              className="w-full bg-[#4a9eff] hover:bg-[#3a7fd9]"
+            >
+              {isProcessing ? "Processing..." : "Analyze"}
+            </Button>
+          </form>
         </Card>
       </div>
     </div>
