@@ -5,6 +5,7 @@ import TrainingProgress from "@/components/TrainingProgress";
 import ModelEvaluation from "@/components/ModelEvaluation";
 import XAIVisualizations from "@/components/XAIVisualizations";
 import { useToast } from "@/hooks/use-toast";
+import { trainModel } from "@/lib/model";
 
 const Index = () => {
   const [isTraining, setIsTraining] = useState(false);

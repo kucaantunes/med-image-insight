@@ -1,13 +1,40 @@
 import * as tf from '@tensorflow/tfjs';
 import * as tfvis from '@tensorflow/tfjs-vis';
 
-export async function trainModel(config: {
+interface TrainingConfig {
   datasetPath: string;
   epochs: number;
   batchSize: number;
   learningRate: number;
   optimizer: string;
-}) {
+}
+
+interface TrainingData {
+  trainData: tf.Tensor;
+  trainLabels: tf.Tensor;
+  testData: tf.Tensor;
+  testLabels: tf.Tensor;
+}
+
+async function loadData(datasetPath: string): Promise<TrainingData> {
+  // This is a placeholder - you'll need to implement actual data loading logic
+  const trainData = tf.randomNormal([100, 224, 224, 3]);
+  const trainLabels = tf.randomUniform([100, 3]);
+  const testData = tf.randomNormal([20, 224, 224, 3]);
+  const testLabels = tf.randomUniform([20, 3]);
+  
+  return {
+    trainData,
+    trainLabels,
+    testData,
+    testLabels
+  };
+}
+
+export async function trainModel(config: TrainingConfig) {
+  // Load data
+  const { trainData, trainLabels, testData, testLabels } = await loadData(config.datasetPath);
+
   // Model architecture
   const model = tf.sequential({
     layers: [
@@ -17,11 +44,11 @@ export async function trainModel(config: {
         kernelSize: 3,
         activation: 'relu',
       }),
-      tf.layers.maxPooling2d({ poolSize: 2 }),
+      tf.layers.maxPooling2d({ poolSize: [2, 2] }),
       tf.layers.conv2d({ filters: 64, kernelSize: 3, activation: 'relu' }),
-      tf.layers.maxPooling2d({ poolSize: 2 }),
+      tf.layers.maxPooling2d({ poolSize: [2, 2] }),
       tf.layers.conv2d({ filters: 128, kernelSize: 3, activation: 'relu' }),
-      tf.layers.maxPooling2d({ poolSize: 2 }),
+      tf.layers.maxPooling2d({ poolSize: [2, 2] }),
       tf.layers.flatten(),
       tf.layers.dropout({ rate: 0.5 }),
       tf.layers.dense({ units: 512, activation: 'relu' }),
@@ -57,21 +84,20 @@ export async function trainModel(config: {
     callbacks,
   });
 
-  // Save model
-  await model.save('downloads://medical-classifier');
+  // Make predictions on test data
+  const predictions = model.predict(testData) as tf.Tensor;
 
   // Return metrics
   return {
     accuracy: history.history.accuracy[history.history.accuracy.length - 1],
-    precision: calculatePrecision(predictions, testLabels),
-    recall: calculateRecall(predictions, testLabels),
-    f1Score: calculateF1Score(predictions, testLabels),
-    confusionMatrix: calculateConfusionMatrix(predictions, testLabels),
-    rocCurve: calculateROC(predictions, testLabels),
+    precision: calculatePrecision(predictions.arraySync(), testLabels.arraySync()),
+    recall: calculateRecall(predictions.arraySync(), testLabels.arraySync()),
+    f1Score: calculateF1Score(predictions.arraySync(), testLabels.arraySync()),
+    confusionMatrix: calculateConfusionMatrix(predictions.arraySync(), testLabels.arraySync()),
+    rocCurve: calculateROC(predictions.arraySync(), testLabels.arraySync()),
   };
 }
 
-// Helper functions for metrics calculation
 function calculatePrecision(predictions: number[][], labels: number[][]) {
   // Implementation
   return 0.96;
